@@ -4,9 +4,18 @@ const Category = require("../models/categoryModel");
 const Variant = require("../models/varientModel");
 const _ = require('lodash');
 const { findByIdAndUpdate } = require("../models/userModel");
+const { v2: cloudinary } = require('cloudinary');
+
+// Configure Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
+
 exports.createCategory = async (req, res) => {
   try {
-    const { name, branchId,image } = req.body;
+    const { name, branchId, image } = req.body;
 
     // Check if a menu with the same name already exists
     const existingMenu = await Category.findOne({ name, branch: branchId });
@@ -20,24 +29,49 @@ exports.createCategory = async (req, res) => {
       return res.status(404).json({ message: 'Location not found' });
     }
 
+    // Upload image to Cloudinary
+    let imageUrl = null;
+    if (image) {
+      try {
+        const uploadResponse = await cloudinary.uploader.upload(image, {
+          folder: 'categories',
+          use_filename: true,
+          unique_filename: true
+        });
+        imageUrl = uploadResponse.secure_url;
+      } catch (uploadError) {
+        return res.status(500).json({ 
+          message: 'Image upload failed', 
+          error: uploadError.message 
+        });
+      }
+    }
+
     // Create the menu if the location is valid and the name is unique
-    const category = await Category.create({ name, branch: branchId ,image});
+    const category = await Category.create({ 
+      name, 
+      branch: branchId, 
+      image: imageUrl 
+    });
+
     res.status(201).json({
       message: 'Category created successfully',
       category,
     });
   } catch (error) {
-    res.status(500).json({ message: 'Error creating category', error: error.message });
+    res.status(500).json({ 
+      message: 'Error creating category', 
+      error: error.message 
+    });
   }
 };
-
 
 exports.getCategoryByBranch = async (req, res) => {
     try {
         const { id: branchId } = req.params;
-        const category = await Category.find({ branch: branchId }).populate('branch');  // Optionally populate if you need branch details
+        const category = await Category.find({ branch: branchId }).populate('branch');
         if (category.length === 0) {
-          return res.status(404).send('No category found for this branch');
+          return res.status(200).send('No category found for this branch');
         }
         res.json(category);
       } catch (error) {
