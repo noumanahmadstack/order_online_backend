@@ -3,7 +3,7 @@ const Schema = mongoose.Schema;
 
 const variantSchema = new Schema({
   name: { type: String, required: true },
-  price: { type: Number, required: true },
+  // price: { type: Number, required: true },
   // stock: { type: Number, required: false, default: 0 }
 });
 

@@ -3,14 +3,14 @@ const Variant = require("../models/varientModel");
 
 exports.createVariant = async (req, res) => {
     try {
-      const { name,price } = req.body;
+      const { name } = req.body;
   
       // Check if the city already exists
-      const existingVariant = await Variant.findOne({ name,price });
+      const existingVariant = await Variant.findOne({ name });
       if (existingVariant) {
         return res.status(400).json({ message: 'Variant already exists' });
       }
-      const variant = await Variant.create({ name,price });
+      const variant = await Variant.create({ name});
       res.status(201).json({
         message: 'Variant created successfully',
         variant,

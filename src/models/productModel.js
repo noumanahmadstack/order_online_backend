@@ -23,7 +23,11 @@ const productSchema = new Schema({
     required: false, // Optional based on your business rules
     default: null, // You can set a default image URL if desired
   },
-  variants: [{ type: Schema.Types.ObjectId, ref: variant }],
+  variants: [{
+    _id: false,
+    variant: { type: Schema.Types.ObjectId, ref: variant }, // Reference to Variant model
+    price: { type: Number, required: true }, // Price for each variant
+  }],
   category: {
     type: Schema.Types.ObjectId,
     ref: "Category",
