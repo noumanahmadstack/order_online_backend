@@ -52,7 +52,7 @@ exports.deleteCity = async (req, res) => {
     // Check if city has any locations
     const locationCount = await Location.countDocuments({ city: id });
     if (locationCount > 0) {
-      return res.status(400).json({
+      return res.status(400).json({ 
         message:
           "Cannot delete city with existing locations. Please delete all locations first.",
         hasLocations: true,
