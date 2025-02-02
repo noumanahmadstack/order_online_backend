@@ -71,11 +71,11 @@ exports.getCategoryByBranch = async (req, res) => {
         const { id: branchId } = req.params;
         const category = await Category.find({ branch: branchId }).populate('branch');
         if (category.length === 0) {
-          return res.status(200).send('No category found for this branch');
+          return res.status(404).send('No category found for this branch');
         }
         res.json(category);
       } catch (error) {
-        res.status(500).send({ message: 'Error fetching menus', error: error.message });
+        res.status(500).send({ message: 'Error fetching menu', error: error.message });
       }
   };
 
@@ -151,11 +151,13 @@ exports.getCategoryByBranch = async (req, res) => {
   exports.addCategoryProduct = async (req, res) => {
     try {
       const {
+        branchId,
         categoryId,
         productName,
         productDescription,
         productPrice,
         productImage,
+        isFeatured,
         variants = [], // Array of variant IDs and their respective prices
       } = req.body;
   
@@ -239,6 +241,8 @@ exports.getCategoryByBranch = async (req, res) => {
         price: productPrice, // Base price for the product (can be adjusted based on variants)
         image: imageUrl,
         category: categoryId,
+        location:branchId,
+        isFeatured:isFeatured,
         variants: validatedVariants, 
       });
   
@@ -288,9 +292,30 @@ exports.getCategoryByBranch = async (req, res) => {
       if (categoryProducts.length === 0) {
         return res.status(200).send('No products found for this category');
       }
-  
       res.json(categoryProducts); // Send the populated products with category name
     } catch (error) {
       res.status(500).send({ message: 'Error fetching category', error: error.message });
     }
   };
+
+
+
+  exports.getProductByBranch = async (req, res) => {
+    try {
+      const { branchId } = req.params;
+      const categoryProducts = await Product.find({ location: branchId })
+      .populate({
+        path: 'variants.variant', // Populate the 'variant' field inside 'variants' array
+        select: 'name', // Only get the 'name' field from Variant model
+      })
+        .populate('category', 'name') // Add this to populate the category name
+        .populate('location', 'name')
+      if (categoryProducts.length === 0) {
+        return res.status(200).send('No products found for this branch');
+      }
+      res.json(categoryProducts); // Send the populated products with category name
+    } catch (error) {
+      res.status(500).send({ message: 'Error fetching products', error: error.message });
+    }
+  };
+
