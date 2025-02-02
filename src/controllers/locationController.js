@@ -39,3 +39,28 @@ exports.getLocationsByCity = async (req, res) => {
     res.status(500).json({ message: 'Error fetching locations', error: error.message });
   }
 };
+
+exports.deleteLocation = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Check if the location exists
+    const location = await Location.findById(id);
+    if (!location) {
+      return res.status(404).json({ message: 'Location not found' });
+    }
+
+    await Location.findByIdAndDelete(id);
+    
+    res.status(200).json({
+      message: 'Location deleted successfully',
+      data: null
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: 'Error deleting location',
+      error: error.message
+    });
+  }
+};
+
