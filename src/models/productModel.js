@@ -33,6 +33,15 @@ const productSchema = new Schema({
     ref: "Category",
     required: true,
   },
+  location: {
+    type: Schema.Types.ObjectId,
+    ref: "Location",
+    required: true,
+  },
+  isFeatured: {
+    type: Boolean,
+    required: false,
+  },
 });
 
 const Product = mongoose.model("Product", productSchema);
