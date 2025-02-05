@@ -20,12 +20,10 @@ exports.createCategory = async (req, res) => {
     // Check if a menu with the same name already exists
     const existingMenu = await Category.findOne({ name, branch: branchId });
     if (existingMenu) {
-      return res
-        .status(409)
-        .json({
-          message:
-            "A Category with this name already exists at the specified location",
-        });
+      return res.status(409).json({
+        message:
+          "A Category with this name already exists at the specified location",
+      });
     }
 
     // Validate the existence of the location
@@ -181,11 +179,9 @@ exports.addCategoryProduct = async (req, res) => {
       category: categoryId,
     });
     if (existingProduct) {
-      return res
-        .status(409)
-        .json({
-          message: "Product with the same name already exists in this category",
-        });
+      return res.status(409).json({
+        message: "Product with the same name already exists in this category",
+      });
     }
 
     // Upload image to Cloudinary if provided
@@ -272,25 +268,120 @@ exports.addCategoryProduct = async (req, res) => {
 
 exports.updateProduct = async (req, res) => {
   try {
-    // Using findByIdAndUpdate to update an existing document in the database.
-    const updatedProduct = await Product.findByIdAndUpdate(
-      { _id: req.body.productId }, // ID of the product to update.
-      { $set: req.body } // Updating fields from the request body.
-    );
-    if (!updatedProduct) {
-      // If no document is found and updated, return a 404 not found.
+    const {
+      productId,
+      name,
+      description,
+      price,
+      image,
+      categoryId,
+      variants,
+      isFeatured,
+    } = req.body;
+
+    // Check if product exists
+    const product = await Product.findById(productId);
+    if (!product) {
       return res.status(404).json({ message: "Product not found" });
     }
-    // Sending the updated product as a response.
+
+    // Check for duplicate product name in the same category
+    if (name) {
+      const existingProduct = await Product.findOne({
+        name,
+        category: product.category,
+        _id: { $ne: productId },
+      });
+
+      if (existingProduct) {
+        return res.status(409).json({
+          message: "A product with this name already exists in this category",
+        });
+      }
+    }
+
+    // Handle image update if new image is provided
+    let imageUrl = product.image;
+    if (image) {
+      try {
+        // Delete old image if exists
+        if (product.image) {
+          const publicId = product.image.split("/").slice(-1)[0].split(".")[0];
+          await cloudinary.uploader.destroy(`products/${publicId}`);
+        }
+
+        // Upload new image
+        const uploadResponse = await cloudinary.uploader.upload(image, {
+          folder: "products",
+          use_filename: true,
+          unique_filename: true,
+        });
+        imageUrl = uploadResponse.secure_url;
+      } catch (uploadError) {
+        return res.status(500).json({
+          message: "Image upload failed",
+          error: uploadError.message,
+        });
+      }
+    }
+
+    // Validate variants if provided
+    let validatedVariants = product.variants;
+    if (variants) {
+      validatedVariants = [];
+      for (const variantData of variants) {
+        const { variantId, price } = variantData;
+
+        if (!variantId) {
+          return res.status(400).json({ message: "Variant ID is required" });
+        }
+
+        const variant = await Variant.findById(variantId);
+        if (!variant) {
+          return res
+            .status(404)
+            .json({ message: `Variant with ID ${variantId} not found` });
+        }
+
+        if (price && (isNaN(price) || price <= 0)) {
+          return res.status(400).json({
+            message: `Price for variant ${variantId} must be a positive number`,
+          });
+        }
+
+        validatedVariants.push({
+          variant: variantId,
+          price: price || variantData.price,
+        });
+      }
+    }
+
+    // Update product with validated data
+    const updatedProduct = await Product.findByIdAndUpdate(
+      productId,
+      {
+        name: name || product.name,
+        description: description || product.description,
+        price: price || product.price,
+        image: imageUrl,
+        category: categoryId || product.category,
+        variants: validatedVariants,
+        isFeatured: isFeatured !== undefined ? isFeatured : product.isFeatured,
+      },
+      { new: true }
+    )
+      .populate("variants.variant")
+      .populate("category");
+
     res.json({
       message: "Product updated successfully",
       product: updatedProduct,
     });
   } catch (error) {
-    // Handling potential errors during the database operation.
-    res
-      .status(500)
-      .json({ message: "Error updating product", error: error.message });
+    res.status(500).json({
+      message: "Error updating product",
+      error: error.message,
+    });
   }
 };
 
@@ -412,6 +503,77 @@ exports.deleteCategory = async (req, res) => {
     console.error("Error deleting category:", error);
     res.status(500).json({
       message: "Error deleting category",
+      error: error.message,
+    });
+  }
+};
+exports.updateCategory = async (req, res) => {
+  try {
+    const { categoryId, name, image } = req.body;
+
+    // Check if the category exists
+    const category = await Category.findById(categoryId);
+    if (!category) {
+      return res.status(404).json({ message: "Category not found" });
+    }
+
+    // If a new name is provided, check for duplicates
+    if (name) {
+      const existingCategory = await Category.findOne({
+        name,
+        branch: category.branch,
+        _id: { $ne: categoryId }, // Exclude current category from check
+      });
+
+      if (existingCategory) {
+        return res.status(409).json({
+          message: "A category with this name already exists at this location",
+        });
+      }
+    }
+
+    // Handle image update if new image is provided
+    let imageUrl = category.image; // Keep existing image by default
+    if (image) {
+      try {
+        // If there's an existing image, delete it from Cloudinary
+        if (category.image) {
+          const publicId = category.image.split("/").slice(-1)[0].split(".")[0];
+          await cloudinary.uploader.destroy(`categories/${publicId}`);
+        }
+
+        // Upload new image
+        const uploadResponse = await cloudinary.uploader.upload(image, {
+          folder: "categories",
+          use_filename: true,
+          unique_filename: true,
+        });
+        imageUrl = uploadResponse.secure_url;
+      } catch (uploadError) {
+        return res.status(500).json({
+          message: "Image upload failed",
+          error: uploadError.message,
+        });
+      }
+    }
+
+    // Update the category
+    const updatedCategory = await Category.findByIdAndUpdate(
+      categoryId,
+      {
+        name: name || category.name,
+        image: imageUrl,
+      },
+      { new: true } // Return the updated document
+    );
+
+    res.status(200).json({
+      message: "Category updated successfully",
+      category: updatedCategory,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Error updating category",
       error: error.message,
     });
   }

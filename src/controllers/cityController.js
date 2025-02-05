@@ -52,7 +52,7 @@ exports.deleteCity = async (req, res) => {
     // Check if city has any locations
     const locationCount = await Location.countDocuments({ city: id });
     if (locationCount > 0) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         message:
           "Cannot delete city with existing locations. Please delete all locations first.",
         hasLocations: true,
@@ -70,6 +70,46 @@ exports.deleteCity = async (req, res) => {
     console.error("Error in deleteCity:", error); // Add logging for debugging
     res.status(500).json({
       message: "Error deleting city",
+      error: error.message,
+    });
+  }
+};
+// Edit an existing city
+exports.editCity = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name } = req.body;
+
+    // Check if the city exists
+    const city = await City.findById(id);
+    if (!city) {
+      return res.status(404).json({ message: "City not found" });
+    }
+
+    // Check if the new name already exists (excluding the current city)
+    const existingCity = await City.findOne({
+      name,
+      _id: { $ne: id },
+    });
+
+    if (existingCity) {
+      return res.status(400).json({ message: "City name already exists" });
+    }
+
+    // Update the city
+    const updatedCity = await City.findByIdAndUpdate(
+      id,
+      { name },
+      { new: true, runValidators: true }
+    );
+
+    res.status(200).json({
+      message: "City updated successfully",
+      city: updatedCity,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Error updating city",
       error: error.message,
     });
   }
