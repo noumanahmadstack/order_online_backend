@@ -259,7 +259,6 @@ exports.addCategoryProduct = async (req, res) => {
       product: savedProduct,
     });
   } catch (error) {
-    console.error("Error adding category product:", error);
     res
       .status(500)
       .json({ message: "Error adding category product", error: error.message });
@@ -396,7 +395,7 @@ exports.getProductByCategory = async (req, res) => {
       .populate("category", "name"); // Add this to populate the category name
 
     if (categoryProducts.length === 0) {
-      return res.status(200).send("No products found for this category");
+      return res.status(404).send("No products found for this category");
     }
     res.json(categoryProducts); // Send the populated products with category name
   } catch (error) {
@@ -417,7 +416,7 @@ exports.getProductByBranch = async (req, res) => {
       .populate("category", "name") // Add this to populate the category name
       .populate("location", "name");
     if (categoryProducts.length === 0) {
-      return res.status(200).send("No products found for this branch");
+      return res.status(404).send("No products found for this branch");
     }
     res.json(categoryProducts); // Send the populated products with category name
   } catch (error) {

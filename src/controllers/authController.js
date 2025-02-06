@@ -14,7 +14,7 @@ exports.signup = async (req, res) => {
       // Check if User Already Exists
       const existingUser = await User.findOne({ email });
       if (existingUser) {
-        return res.status(400).json({ message: 'Email is already registered' });
+        return res.status(400).json({message: 'Email is already registered'});
       }
   
       // Create New User
@@ -52,7 +52,7 @@ exports.login = async (req, res) => {
 
     res.status(200).json({
       message: 'Login successful',
-      user: { id: user._id, first_name: user.first_name, email: user.email,role: user.role },
+      user: { id: user._id, first_name: user.first_name,last_name:user.last_name,phone_number:user?.phone_number, email: user.email,role: user.role },
       token,
     });
   } catch (error) {
