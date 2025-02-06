@@ -1,16 +1,41 @@
-const express = require('express');
-const { createCategory , getCategoryByBranch, addCategoryProduct, getProductByCategory, updateProduct, getAllProductsByBranch, getAllFeaturedProducts, getProductByBranch} = require('../controllers/productController');
-const { protect, restrictTo } = require('../middleWares/authMiddleware');
+const express = require("express");
+const {
+  createCategory,
+  getCategoryByBranch,
+  addCategoryProduct,
+  getProductByCategory,
+  updateProduct,
+  getProductByBranch,
+  deleteProduct,
+  deleteCategory,
+  updateCategory, // Add this import
+} = require("../controllers/productController");
+const { protect, restrictTo } = require("../middleWares/authMiddleware");
 
 const router = express.Router();
 
-// category
-router.post('/category',protect, restrictTo('admin'), createCategory);
-router.get('/category/:id', getCategoryByBranch);
+// Category routes
+router
+  .route("/category")
+  .post(protect, restrictTo("admin"), createCategory)
+  .patch(protect, restrictTo("admin"), updateCategory);
 
-// product
-router.post('',protect,restrictTo('admin'), addCategoryProduct);
-router.get('/:categoryId', getProductByCategory);
-router.patch('/updateProduct',protect,restrictTo('admin'),updateProduct)
-router.get('/:branchId/allProducts',getProductByBranch);
+router
+  .route("/category/:id")
+  .get(getCategoryByBranch)
+  .delete(protect, restrictTo("admin"), deleteCategory);
+
+// Product routes
+router
+  .route("/products")
+  .post(protect, restrictTo("admin"), addCategoryProduct);
+
+router
+  .route("/products/:productId")
+  .patch(protect, restrictTo("admin"), updateProduct)
+  .delete(protect, restrictTo("admin"), deleteProduct);
+
+router.get("/products/category/:categoryId", getProductByCategory);
+router.get("/products/branch/:branchId", getProductByBranch);
+
 module.exports = router;
