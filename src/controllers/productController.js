@@ -332,7 +332,7 @@ exports.getProductByBranch = async (req, res) => {
     const { branchId } = req.params;
     const categoryProducts = await Product.find({ location: branchId })
       .populate({
-        path: "variants.variant", // Populate the 'variant' field inside 'variants' array
+        path: 'variants.variant', // Populate the 'variant' field inside 'variants' array
         select: "name", // Only get the 'name' field from Variant model
       })
       .populate("category", "name") // Add this to populate the category name

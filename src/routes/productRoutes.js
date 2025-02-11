@@ -13,29 +13,15 @@ const {
 const { protect, restrictTo } = require("../middleWares/authMiddleware");
 
 const router = express.Router();
-
-// Category routes
-router
-  .route("/category")
-  .post(protect, restrictTo("admin"), createCategory)
-  .patch(protect, restrictTo("admin"), updateCategory);
-
-router
-  .route("/category/:id")
-  .get(getCategoryByBranch)
-  .delete(protect, restrictTo("admin"), deleteCategory);
-
+  // category routes
+router.post("/category", protect, restrictTo("admin"), createCategory);
+router.get("/category/:id", getCategoryByBranch);
+router.patch("/category", protect, restrictTo("admin"), updateCategory); // Add this new route
+router.delete("/category/:categoryId", protect, restrictTo("admin"), deleteCategory);
 // Product routes
-router
-  .route("/products")
-  .post(protect, restrictTo("admin"), addCategoryProduct);
-
-router
-  .route("/products/:productId")
-  .patch(protect, restrictTo("admin"), updateProduct)
-  .delete(protect, restrictTo("admin"), deleteProduct);
-
-router.get("/products/category/:categoryId", getProductByCategory);
-router.get("/products/branch/:branchId", getProductByBranch);
-
+router.post("", protect, restrictTo("admin"), addCategoryProduct);
+router.get("/:categoryId", getProductByCategory);
+router.patch("/updateProduct", protect, restrictTo("admin"), updateProduct);
+router.get("/:branchId/allProducts", getProductByBranch);
+router.delete("/:productId", protect, restrictTo("admin"), deleteProduct);
 module.exports = router;
