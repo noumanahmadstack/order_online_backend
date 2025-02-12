@@ -8,6 +8,7 @@ const locationRoutes = require('../routes/locationRoutes');
 const productRoutes = require('../routes/productRoutes');
 const variantRoutes = require('../routes/variantRoutes');
 const cartRoutes = require('../routes/cartRoutes');
+const bannerRoutes = require('../routes/bannerRoutes');
 
 app.use('/auth', authRoutes);
 app.use('/user', userRoutes);
@@ -16,5 +17,6 @@ app.use('/location', locationRoutes);
 app.use('/product',productRoutes);
 app.use('/variant',variantRoutes);
 app.use('/cart',cartRoutes);
+app.use('/banner', bannerRoutes);
 
 module.exports = app
