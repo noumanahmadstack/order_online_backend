@@ -206,23 +206,8 @@ exports.updateProduct = async (req, res) => {
       return res.status(404).json({ message: "Product not found" });
     }
 
-    // Check for duplicate product name in the same category
-    if (name) {
-      const existingProduct = await Product.findOne({
-        name,
-        category: product.category,
-        _id: { $ne: productId },
-      });
-
-      if (existingProduct) {
-        return res.status(409).json({
-          message: "A product with this name already exists in this category",
-        });
-      }
-    }
-
-    // Handle image update if new image is provided
-    let imageUrl = product.image;
+    // Handle image update ONLY if new image is provided
+    let imageUrl = product.image; // Default to existing image
     if (image) {
       try {
         // Delete old image if exists
@@ -246,10 +231,10 @@ exports.updateProduct = async (req, res) => {
       }
     }
 
-    // Validate variants if provided
-    let validatedVariants = product.variants;
+    // Validate and process variants if provided
+    let processedVariants = product.variants; // Default to existing variants
     if (variants) {
-      validatedVariants = [];
+      processedVariants = [];
       for (const variantData of variants) {
         const { variantId, price } = variantData;
 
@@ -259,40 +244,50 @@ exports.updateProduct = async (req, res) => {
 
         const variant = await Variant.findById(variantId);
         if (!variant) {
-          return res
-            .status(404)
-            .json({ message: `Variant with ID ${variantId} not found` });
+          return res.status(404).json({
+            message: `Variant with ID ${variantId} not found`,
+          });
         }
 
-        if (price && (isNaN(price) || price <= 0)) {
+        if (price !== undefined && (isNaN(price) || price <= 0)) {
           return res.status(400).json({
             message: `Price for variant ${variantId} must be a positive number`,
           });
         }
 
-        validatedVariants.push({
+        processedVariants.push({
           variant: variantId,
-          price: price || variantData.price,
+          price: price !== undefined ? price : variantData.price,
         });
       }
     }
 
+    // Create update object with only provided fields
+    const updateData = {
+      ...(name && { name }),
+      ...(description !== undefined && { description }),
+      ...(price !== undefined && { price }),
+      ...(image && { image: imageUrl }),
+      ...(categoryId && { category: categoryId }),
+      ...(variants && { variants: processedVariants }), // Use processedVariants instead
+      ...(isFeatured !== undefined && { isFeatured }),
+    };
+
     // Update product with validated data
     const updatedProduct = await Product.findByIdAndUpdate(
       productId,
+      updateData,
       {
-        name: name || product.name,
-        description: description || product.description,
-        price: price || product.price,
-        image: imageUrl,
-        category: categoryId || product.category,
-        variants: validatedVariants,
-        isFeatured: isFeatured !== undefined ? isFeatured : product.isFeatured,
-      },
-      { new: true }
+        new: true,
+        runValidators: true,
+      }
     )
       .populate("variants.variant")
       .populate("category");
+
+    if (!updatedProduct) {
+      return res.status(404).json({ message: "Product not found" });
+    }
 
     res.json({
       message: "Product updated successfully",
@@ -332,7 +327,7 @@ exports.getProductByBranch = async (req, res) => {
     const { branchId } = req.params;
     const categoryProducts = await Product.find({ location: branchId })
       .populate({
-        path: 'variants.variant', // Populate the 'variant' field inside 'variants' array
+        path: "variants.variant", // Populate the 'variant' field inside 'variants' array
         select: "name", // Only get the 'name' field from Variant model
       })
       .populate("category", "name") // Add this to populate the category name
@@ -430,7 +425,7 @@ exports.deleteCategory = async (req, res) => {
 };
 exports.updateCategory = async (req, res) => {
   try {
-    const { categoryId, name, image } = req.body;
+    const { categoryId, name, image, branchId } = req.body; // Add branchId here
 
     // Check if the category exists
     const category = await Category.findById(categoryId);
@@ -442,8 +437,8 @@ exports.updateCategory = async (req, res) => {
     if (name) {
       const existingCategory = await Category.findOne({
         name,
-        branch: category.branch,
-        _id: { $ne: categoryId }, // Exclude current category from check
+        branch: branchId || category.branch, // Use new branchId if provided
+        _id: { $ne: categoryId },
       });
 
       if (existingCategory) {
@@ -484,8 +479,9 @@ exports.updateCategory = async (req, res) => {
       {
         name: name || category.name,
         image: imageUrl,
+        branch: branchId || category.branch, // Add this line to update branch
       },
-      { new: true } // Return the updated document
+      { new: true }
     );
 
     res.status(200).json({
