@@ -283,3 +283,96 @@ exports.AllOrders = async  (req, res) => {
       data: filteredOrders,
   });
 };
+
+
+
+// API endpoint to generate order report
+exports.Report = async (req, res) => {
+  const { branchId, startDate, endDate } = req.query; // Get query parameters
+
+  try {
+      let matchQuery = {};
+
+      // Filter by branchId if provided
+      if (branchId) {
+          matchQuery.branchId = new mongoose.Types.ObjectId(branchId);
+      }
+
+      // Filter by date range if startDate and endDate are provided
+      if (startDate && endDate) {
+          matchQuery.createdAt = {
+              $gte: new Date(startDate), // Greater than or equal to startDate
+              $lte: new Date(endDate),  // Less than or equal to endDate
+          };
+      }
+
+      // Aggregate orders to generate the report
+      const report = await Order.aggregate([
+          { $match: matchQuery }, // Apply filters (branchId and date range)
+          {
+              $group: {
+                  _id: branchId ? '$branchId' : null, // Group by branchId if provided
+                  totalOrders: { $sum: 1 }, // Count total orders
+                  totalAmount: { $sum: '$totalAmount' }, // Sum total order price
+                  totalQuantity: { $sum: { $sum: '$items.quantity' } }, // Sum total quantity
+                  pendingOrders: {
+                      $sum: {
+                          $cond: [{ $eq: ['$status', 'Pending'] }, 1, 0],
+                      },
+                  },
+                  assignedOrders: {
+                      $sum: {
+                          $cond: [{ $eq: ['$status', 'Assigned'] }, 1, 0],
+                      },
+                  },
+                  deliveredOrders: {
+                      $sum: {
+                          $cond: [{ $eq: ['$status', 'Delivered'] }, 1, 0],
+                      },
+                  },
+                  canceledOrders: {
+                      $sum: {
+                          $cond: [{ $eq: ['$status', 'Cancel'] }, 1, 0],
+                      },
+                  },
+              },
+          },
+          {
+              $lookup: {
+                  from: 'locations', // Join with the Location collection
+                  localField: '_id',
+                  foreignField: '_id',
+                  as: 'branch',
+              },
+          },
+          {
+              $unwind: {
+                  path: '$branch',
+                  preserveNullAndEmptyArrays: true, // Include orders without a branch
+              },
+          },
+          {
+              $project: {
+                  _id: 0, // Exclude the _id field
+                  branch: { $ifNull: ['$branch.name', 'Overall'] }, // Use branch name or "Overall"
+                  totalOrders: 1,
+                  totalAmount: 1,
+                  totalQuantity: 1,
+                  pendingOrders: 1,
+                  assignedOrders: 1,
+                  deliveredOrders: 1,
+                  canceledOrders: 1,
+              },
+          },
+      ]);
+
+      res.status(200).json({
+          success: true,
+          data: report,
+      });
+  } catch (error) {
+      console.error(error);
+      res.status(500).json({ success: false, message: 'Failed to generate report', error: error.message });
+  }
+};
+
