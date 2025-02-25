@@ -8,6 +8,7 @@ const userSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true, lowercase: true, trim: true },
   phone_number: { type: String, required: true, unique: true, match: /^\d{10,15}$/ },
   password: { type: String, required: true, minlength: 6, select: false }, // Exclude by default
+  resetPasswordToken: String,
   role: {
     type: String,
     enum: ['user', 'rider', 'admin'], // Allowed roles

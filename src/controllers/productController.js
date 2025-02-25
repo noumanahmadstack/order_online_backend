@@ -3,8 +3,8 @@ const Product = require("../models/productModel");
 const Category = require("../models/categoryModel");
 const Variant = require("../models/varientModel");
 const _ = require("lodash");
-const { findByIdAndUpdate } = require("../models/userModel");
 const { v2: cloudinary } = require("cloudinary");
+const ProductRelation = require("../models/relatedProductModel");
 
 // Configure Cloudinary
 cloudinary.config({
@@ -343,6 +343,37 @@ exports.getProductByBranch = async (req, res) => {
   }
 };
 
+exports.getProductByName =  async (req, res) => {
+
+    const { name } = req.query;
+  
+  
+    if (!name) {
+      return res.status(400).json({ message: 'Please provide a search term' });
+    }
+  
+    try {
+      // Case-insensitive search for products by name
+      const products = await Product.find({
+        name: { $regex: name, $options: 'i' }, // 'i' for case-insensitive
+      })
+      .populate({
+        path: "variants.variant", // Populate the 'variant' field inside 'variants' array
+        select: "name", // Only get the 'name' field from Variant model
+      })
+      .populate("category", "name") // Add this to populate the category name
+      .populate("location", "name");
+  
+      if (products.length === 0) {
+        return res.status(404).json({ message: 'No products found' });
+      }
+  
+      res.status(200).json({ products });
+    } catch (err) {
+      res.status(500).json({ message: 'Server error', error: err.message });
+    }
+  };
+
 exports.deleteProduct = async (req, res) => {
   try {
     const { productId } = req.params;
@@ -495,3 +526,69 @@ exports.updateCategory = async (req, res) => {
     });
   }
 };
+
+exports.addOptionalProduct = async (req,res) =>{
+  try {
+    const { mainProductId, relatedProductIds } = req.body;
+
+    // Check if the main product exists
+    const mainProduct = await Product.findById(mainProductId);
+    if (!mainProduct) {
+        return res.status(404).json({ message: 'Main product not found' });
+    }
+
+    // Check if all related products exist
+    const relatedProducts = await Product.find({ _id: { $in: relatedProductIds } });
+    if (relatedProducts.length !== relatedProductIds.length) {
+        return res.status(404).json({ message: 'One or more related products not found' });
+    }
+
+    // Check if any of the relationships already exist
+    const existingRelations = await ProductRelation.find({
+        mainProduct: mainProductId,
+        relatedProduct: { $in: relatedProductIds },
+    });
+
+    if (existingRelations.length > 0) {
+        return res.status(400).json({ message: 'Product already associated' });
+    }
+
+    // Create new relationships
+    const newRelationships = await ProductRelation.insertMany(
+        relatedProductIds.map((relatedProductId) => ({
+            mainProduct: mainProductId,
+            relatedProduct: relatedProductId,
+        }))
+    );
+
+    res.status(201).json(newRelationships);
+} catch (error) {
+    res.status(500).json({ message: 'Error creating product relationships', error: error.message });
+}
+};
+
+exports.getOptionalProducts = async (req,res) =>{
+    try {
+        const productId = req.params.productId
+
+        // Fetch all relationships where the product is the main product
+        const relationships = await ProductRelation.find({ mainProduct: productId }).populate({
+          path: 'relatedProduct',
+          populate: {
+            path: 'variants.variant', // Populate the 'variant' field inside 'variants' array
+            select: 'name', // Only get the 'name' field from Variant model
+          },
+        });
+        // Extract related products
+        const relatedProducts = relationships.map((rel) => rel.relatedProduct);
+
+        res.status(200).json(relatedProducts);
+    } catch (error) {
+        res.status(500).json({ message: 'Error fetching related products', error: error.message });
+    }
+
+}
+
+
+
+

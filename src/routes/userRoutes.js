@@ -4,6 +4,10 @@ const {
   getAllUsers,
   updateUserRole,
   deleteUser,
+  updateProfile,
+  changePassword,
+  forgetPassword,
+  resetPassword,
 } = require("../controllers/userController");
 const { protect, restrictTo } = require("../middleWares/authMiddleware");
 
@@ -28,5 +32,11 @@ router.get("/rider", protect, restrictTo("rider"), (req, res) => {
 router.get("/admin", protect, restrictTo("admin"), (req, res) => {
   res.send("Welcome, Admin");
 });
+
+router.put('/update_profile',protect,restrictTo("admin",'user'),updateProfile);
+router.put('/update_password',protect,changePassword);
+router.post("/forget_password",forgetPassword);
+router.post("/reset_password",resetPassword);
+
 
 module.exports = router;

@@ -8,7 +8,10 @@ const {
   getProductByBranch,
   deleteProduct,
   deleteCategory,
-  updateCategory, // Add this import
+  updateCategory,
+  getProductByName,
+  addOptionalProduct,
+  getOptionalProducts, // Add this import
 } = require("../controllers/productController");
 const { protect, restrictTo } = require("../middleWares/authMiddleware");
 
@@ -24,4 +27,7 @@ router.get("/:categoryId", getProductByCategory);
 router.patch("/updateProduct", protect, restrictTo("admin"), updateProduct);
 router.get("/:branchId/allProducts", getProductByBranch);
 router.delete("/:productId", protect, restrictTo("admin"), deleteProduct);
+router.get('/',getProductByName);
+router.post('/relate',protect,restrictTo("admin"),addOptionalProduct);
+router.get('/:productId/optional_product',protect,restrictTo("admin","user"),getOptionalProducts)
 module.exports = router;

@@ -1,11 +1,15 @@
 const express = require('express');
 const { protect, restrictTo } = require("../middleWares/authMiddleware");
-const { createOrder, getUserOrders } = require('../controllers/orderController');
+const { createOrder, getUserOrders, AssignOrder, getRiderOrders, verifyOtp, AllOrders } = require('../controllers/orderController');
 
 const router = express.Router();
 
-// Route to create a city
+
 router.post("/create", protect, restrictTo("user"), createOrder);
 router.get('/userOrderList',protect,restrictTo("user"),getUserOrders);
-// router.delete('/deleteCartItem/:id',protect, restrictTo("user"),deleteCartItem);
+//for admin
+router.get("/all_Orders", protect, restrictTo("admin"), AllOrders);
+router.post("/assign_UpdateOrderStatus", protect, restrictTo("admin"), AssignOrder);
+router.post('/verify_Otp',protect,restrictTo("rider"),verifyOtp);
+router.get('/rider_Orders',protect,restrictTo("rider"),getRiderOrders);
 module.exports = router;
