@@ -264,24 +264,81 @@ exports.verifyOtp= async (req, res) => {
   }
 };
 
-exports.AllOrders = async  (req, res) => {
-  const { branchId } = req.query; // Get the branch from query parameters
+exports.AllOrders = async (req, res) => {
+  try {
+    const { branchId } = req.query; // Get branch ID from query parameters
 
-  let filteredOrders = Order;
-  const branch = await Location.findById(branchId);
+    let query = {};
+    if (branchId) {
+      // Check if branch exists
+      const branch = await Location.findById(branchId);
       if (!branch) {
         return res.status(400).json({ message: 'Invalid branch ID' });
       }
-  // Filter orders by branch if the branch query parameter is provided
-  if (branchId) {
-      filteredOrders = Order.filter(order => order.branch === branchId);
-  };
-  // Return the filtered orders
-  res.json({
+      query.branchId = branchId;
+    }
+
+    // Fetch orders with populated data
+    const orders = await Order.find(query)
+      .sort({ createdAt: -1 }) // Sort by newest first
+      .populate({
+        path: 'userId',
+        select: 'first_name last_name email phone_number', // User details
+      })
+      .populate({
+        path: 'riderId',
+        select: 'first_name last_name', // Rider details
+      })
+      .populate({
+        path: 'items.product',
+        select: 'name', // Product name
+      })
+      .populate({
+        path: 'items.variant',
+        select: 'name', // Variant name
+      });
+
+    // Transform the orders to include names directly in the items
+    const formattedOrders = orders.map(order => {
+      // Convert Mongoose document to plain object
+      const orderObj = order.toObject();
+      
+      // Format items to include product and variant names
+      if (orderObj.items && Array.isArray(orderObj.items)) {
+        orderObj.items = orderObj.items.map(item => ({
+          ...item,
+          productName: item.product?.name || 'Unknown Product',
+          variantName: item.variant?.name || 'Unknown Variant',
+        }));
+      }
+      
+      // Add user information if available
+      if (orderObj.userId) {
+        orderObj.customerName = [orderObj.userId.first_name, orderObj.userId.last_name]
+          .filter(Boolean)
+          .join(' ') || 'Unknown Customer';
+        orderObj.customerEmail = orderObj.userId.email;
+        orderObj.customerPhone = orderObj.userId.phone_number;
+      }
+      
+      // Add rider information if available
+      if (orderObj.riderId) {
+        orderObj.riderName = [orderObj.riderId.first_name, orderObj.riderId.last_name]
+          .filter(Boolean)
+          .join(' ') || 'Unknown Rider';
+      }
+      
+      return orderObj;
+    });
+
+    res.json({
       success: true,
-      message: branch ? `Orders for branch ${branch}` : 'All orders',
-      data: filteredOrders,
-  });
+      message: branchId ? `Orders for branch ${branchId}` : 'All orders',
+      data: formattedOrders,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+  }
 };
 
 
