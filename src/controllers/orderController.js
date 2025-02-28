@@ -206,9 +206,8 @@ exports.AssignOrder = async (req, res) => {
       res.status(500).json({ message: 'Internal server error' });
   }
 };
- exports.getRiderOrders= async (req, res) => {
-  const riderId = req.user._id; // Get the rider's ID from the authenticated user
-
+ exports.getRiderOrders = async (req, res) => {
+  const riderId = req.user.id; // Get the rider's ID from the authenticated user
   try {
       // Step 1: Fetch orders assigned to the rider
       const orders = await Order.find({ riderId })
