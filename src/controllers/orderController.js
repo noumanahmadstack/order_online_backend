@@ -227,7 +227,7 @@ exports.AssignOrder = async (req, res) => {
 
 exports.verifyOtp= async (req, res) => {
   const { orderId, otp } = req.body;
-  const riderId = req.user._id; // Get the rider's ID from the authenticated user
+  const riderId = req.user.id; // Get the rider's ID from the authenticated user
 
   try {
       // Step 1: Find the order
@@ -243,7 +243,7 @@ exports.verifyOtp= async (req, res) => {
 
       // Step 3: Check if the OTP is still valid (optional: add OTP expiry)
       const currentTime = new Date();
-      const otpExpiryTime = new Date(order.updatedAt.getTime() + 10 * 60000); // OTP valid for 10 minutes
+      const otpExpiryTime = new Date(order.updatedAt.getTime() + 24 * 60 * 60 * 1000); // OTP valid for 10 minutes
       if (currentTime > otpExpiryTime) {
           return res.status(400).json({ message: 'OTP has expired' });
       }
