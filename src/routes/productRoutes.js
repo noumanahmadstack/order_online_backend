@@ -29,5 +29,5 @@ router.get("/:branchId/allProducts", getProductByBranch);
 router.delete("/:productId", protect, restrictTo("admin"), deleteProduct);
 router.get('/',getProductByName);
 router.post('/relate',protect,restrictTo("admin"),addOptionalProduct);
-router.get('/:productId/optional_product',protect,restrictTo("admin","user"),getOptionalProducts)
+router.get('/:productId/optional_product',getOptionalProducts)
 module.exports = router;
