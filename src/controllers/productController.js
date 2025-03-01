@@ -589,6 +589,40 @@ exports.getOptionalProducts = async (req,res) =>{
 
 }
 
+exports.removeOptionalProduct = async (req, res) => {
+  try {
+    const {mainProductId, relatedProductIds } = req.body;
 
+    // Validate relatedProductIds
+    if (!Array.isArray(relatedProductIds)) {
+      return res.status(400).json({ message: 'relatedProductIds must be an array' });
+    }
+    // Check if the main product exists
+    const mainProduct = await Product.findById(mainProductId);
+    if (!mainProduct) {
+      return res.status(404).json({ message: 'Main product not found' });
+    }
+
+    // Check if all related products exist
+    const relatedProducts = await Product.find({ _id: { $in: relatedProductIds } });
+    if (relatedProducts.length !== relatedProductIds.length) {
+      return res.status(404).json({ message: 'One or more related products not found' });
+    }
+
+    // Delete the relationships
+    const deletedRelations = await ProductRelation.deleteMany({
+      mainProduct: mainProductId,
+      relatedProduct: { $in: relatedProductIds },
+    });
+
+    if (deletedRelations.deletedCount === 0) {
+      return res.status(404).json({ message: 'No relationships found to delete' });
+    }
+
+    res.status(200).json({ message: 'Optional products removed successfully', deletedRelations });
+  } catch (error) {
+    res.status(500).json({ message: 'Error removing product relationships', error: error.message });
+  }
+};
 
 
