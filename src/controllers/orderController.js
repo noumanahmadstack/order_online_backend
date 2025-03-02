@@ -186,12 +186,12 @@ exports.AssignOrder = async (req, res) => {
           });
       } else if (action === 'cancel') {
           // Check if the order is already canceled
-          if (order.status === 'Canceled') {
-              return res.status(400).json({ message: 'Order is already canceled' });
+          if (order.status === 'Cancel') {
+              return res.status(400).json({ message: 'Order is already cancel' });
           }
 
           // Cancel the order
-          order.status = 'Canceled'; // Update order status
+          order.status = 'Cancel'; // Update order status
           await order.save();
 
           return res.status(200).json({
