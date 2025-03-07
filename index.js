@@ -8,10 +8,10 @@ const routes = require('./src/routes/index');
 const app = express();
 
 // CORS configuration
-app.use(cors({
-  origin: 'https://restaurant-admin-dashboard-flax.vercel.app/',
-  credentials: true
-}));
+// app.use(cors({
+//   origin: 'https://restaurant-admin-dashboard-flax.vercel.app/',
+//   credentials: true
+// }));
 
 // Increase payload size limit for JSON and URL-encoded data
 app.use(express.json({ limit: '10mb' }));
