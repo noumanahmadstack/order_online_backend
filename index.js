@@ -9,7 +9,7 @@ const app = express();
 
 // CORS configuration
 app.use(cors({
-  origin: 'https://sultanpulao-admin-dashboard.vercel.app/',
+  origin: 'https://restaurant-admin-dashboard-flax.vercel.app/',
   credentials: true
 }));
 
